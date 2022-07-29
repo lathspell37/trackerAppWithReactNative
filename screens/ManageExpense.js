@@ -1,12 +1,17 @@
 import {Text, StyleSheet, View} from 'react-native'
-import {useContext, useLayoutEffect} from 'react'
+import {useContext, useLayoutEffect, useState} from 'react'
 import IconButton from '../components/UI/IconButton';
 import { GlobalStyles } from '../constants/styles';
 import {ExpensesContext} from '../store/expenses-context'
 import ExpenseForm from '../components/ManageExpense/ExpenseForm';
-
+import { storeExpense, updateExpense, deleteExpense } from '../util/http';
+import LoadingOverlay from '../components/UI/LoadingOverlay';
+import ErrorOverlay from '../components/UI/ErrorOverlay';
 
 function ManageExpense({route, navigation}){
+
+    const [isAdding, setIsAdding] = useState(false);
+    const [error, setError] = useState();
 
     const expensesCtx = useContext(ExpensesContext);
 
@@ -21,9 +26,31 @@ function ManageExpense({route, navigation}){
         })
     }, [navigation,isEditing]);
 
-    function deleteExpenseHandler(){
-        expensesCtx.deleteExpense(editedExpenseId);
-        navigation.goBack();
+
+    if(error && !isAdding){
+        return(
+            <ErrorOverlay message={error} />
+        )
+    }
+
+    if(isAdding){
+        return (
+            <LoadingOverlay />
+        );
+     }
+
+    async function deleteExpenseHandler(){
+        setIsAdding(true);
+        try {
+            await deleteExpense(editedExpenseId);
+            expensesCtx.deleteExpense(editedExpenseId);
+            navigation.goBack();
+        } catch (error) {
+            setError('Could not delete expense')
+            setIsAdding(false);
+        }
+
+        
         
     }
 
@@ -31,13 +58,23 @@ function ManageExpense({route, navigation}){
         navigation.goBack();
     }
 
-    function confirmHandler(expenseData){
-        if(isEditing){
-            expensesCtx.updateExpense(editedExpenseId, expenseData);
-        } else{
-            expensesCtx.addExpense(expenseData);
+    async function confirmHandler(expenseData){
+        setIsAdding(true);
+        try {
+            if(isEditing){
+                expensesCtx.updateExpense(editedExpenseId, expenseData);
+                await updateExpense(editedExpenseId,expenseData);
+            } else{
+                const id = await storeExpense(expenseData);
+                expensesCtx.addExpense({...expenseData, id:id});
+            }
+            navigation.goBack();
+        } catch (error) {
+            setError('Could not save expense');
+            setIsAdding(false);
         }
-        navigation.goBack();
+
+        
     }
 
     return (

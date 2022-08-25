@@ -1,4 +1,4 @@
-income and outcome tracker app with react rative attached to firebase
+income and outcome tracker app with react native attached to firebase
 
 ----------------------------------------------------------------------
  
